@@ -1,0 +1,12 @@
+{% extends 'App/base.html' %}
+{% load crispy_forms_tags %}
+{% block title %}Nova Movimentação{% endblock %}
+{% block conteudo %}
+    <h2>Nova Movimentação para estoque: {{ estoque.nome }}</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-primary">Salvar</button>
+    </form>
+    <a href="{% url 'estoque_list' estoque.id %}">Voltar ao Estoque</a>
+{% endblock %}

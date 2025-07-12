@@ -1,0 +1,137 @@
+{% load crispy_forms_tags %}
+{% load static %}
+<link rel="stylesheet" href="{% static 'App/dashboard_produtos.css' %}">
+
+<h3 class="mb-4" style="letter-spacing:1.5px; font-weight:300;">PRODUTOS DO ESTOQUE: {{ estoque.nome|upper }}</h3>
+
+<form method="get" class="mb-4">
+    <input type="hidden" name="aba" value="produtos">
+    <div class="row g-2">
+        <div class="col-md-3">
+            <input type="text" name="q" placeholder="Buscar por nome do produto..." value="{{ request.GET.q }}" class="form-control">
+        </div>
+        <div class="col-md-2">
+            <select name="categoria" class="form-select">
+                <option value="">Todas as categorias</option>
+                {% for categoria in categorias %}
+                    {% with catid=categoria.id|stringformat:"s" %}
+                        <option value="{{ catid }}" {% if request.GET.categoria == catid %}selected{% endif %}>
+                            {{ categoria.nome }}
+                        </option>
+                    {% endwith %}
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="marca" class="form-select">
+                <option value="">Todas as marcas</option>
+                {% for m in marcas %}
+                    <option value="{{ m }}" {% if request.GET.marca == m %}selected{% endif %}>{{ m }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="metrica" class="form-select">
+                <option value="">Todas as métricas</option>
+                {% for metrica in metricas %}
+                    <option value="{{ metrica.id }}" {% if request.GET.metrica == metrica.id|stringformat:"s" %}selected{% endif %}>
+                        {{ metrica.nome }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label>Preço total</label>
+            <div class="input-group">
+                <select class="form-select" name="preco_total_op">
+                    <option value="">---</option>
+                    <option value="lt" {% if request.GET.preco_total_op == 'lt' %}selected{% endif %}>antes</option>
+                    <option value="eq" {% if request.GET.preco_total_op == 'eq' %}selected{% endif %}>no valor</option>
+                    <option value="gt" {% if request.GET.preco_total_op == 'gt' %}selected{% endif %}>depois</option>
+                </select>
+                <input type="number" step="0.01" class="form-control" name="preco_total_val" value="{{ request.GET.preco_total_val }}">
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label>Data de Criação</label>
+            <div class="input-group">
+                <select class="form-select" name="created_op">
+                    <option value="">---</option>
+                    <option value="lt" {% if request.GET.created_op == 'lt' %}selected{% endif %}>antes</option>
+                    <option value="eq" {% if request.GET.created_op == 'eq' %}selected{% endif %}>no dia</option>
+                    <option value="gt" {% if request.GET.created_op == 'gt' %}selected{% endif %}>depois</option>
+                </select>
+                <input type="date" class="form-control" name="created_val" value="{{ request.GET.created_val }}">
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label>Data de Modificação</label>
+            <div class="input-group">
+                <select class="form-select" name="updated_op">
+                    <option value="">---</option>
+                    <option value="lt" {% if request.GET.updated_op == 'lt' %}selected{% endif %}>antes</option>
+                    <option value="eq" {% if request.GET.updated_op == 'eq' %}selected{% endif %}>no dia</option>
+                    <option value="gt" {% if request.GET.updated_op == 'gt' %}selected{% endif %}>depois</option>
+                </select>
+                <input type="date" class="form-control" name="updated_val" value="{{ request.GET.updated_val }}">
+            </div>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-dark w-100">Filtrar</button>
+        </div>
+        <div class="col-md-1">
+            <a href="{% url 'estoque_dashboard' estoque.id %}?aba=produtos" class="btn btn-secondary w-100">Limpar</a>
+        </div>
+    </div>
+</form>
+
+<div class="produtos-table-wrapper">
+  <table class="table produtos-table">
+    <thead>
+        <tr>
+            <th>PRODUTO</th>
+            <th>CATEGORIA</th>
+            <th>MARCA</th>
+            <th>VALIDADE</th>
+            <th>PREÇO TOTAL</th>
+            <th>MÉTRICA</th>
+            <th>QUANTIDADE EM ESTOQUE</th>
+            <th>CRIADO EM</th>
+            <th>ALTERADO EM</th>
+            <th>AÇÕES</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in produtos_info %}
+            <tr>
+                <td>{{ item.produto.nome }}</td>
+                <td>
+                    {% if item.produto.categoria %}
+                        {{ item.produto.categoria.nome }}
+                    {% else %}
+                        Sem categoria
+                    {% endif %}
+                </td>
+                <td>{{ item.produto.marca }}</td>
+                <td>{{ item.produto.validade|date:"d/m/Y" }}</td>
+                <td>R$ {{ item.preco_total|floatformat:2 }}</td>
+                <td>{{ item.produto.get_metrica_display }}</td>
+                <td>{{ item.saldo }}</td>
+                <td>{{ item.produto.dataCadastro|date:"d/m/Y H:i" }}</td>
+                <td>{{ item.produto.dataModificacao|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <a href="{% url 'produto_update' estoque.id item.produto.id %}" class="btn btn-sm btn-outline-dark">Editar</a>
+                    <a href="{% url 'produto_delete' estoque.id item.produto.id %}" class="btn btn-sm btn-outline-danger"
+                       onclick="return confirm('Tem certeza que deseja remover este produto?');">Remover</a>
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="10">Nenhum produto cadastrado neste estoque.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+  </table>
+</div>
+<a href="{% url 'estoque_dashboard' estoque.id %}?aba=criar_produto" class="btn btn-dark">Adicionar Produto</a>
+<a href="{% url 'selecionar_estoque' %}" class="btn btn-secondary ms-2">Trocar de Estoque</a>

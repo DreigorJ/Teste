@@ -1,0 +1,68 @@
+{% extends 'App/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if produto %}Editar Produto{% else %}Novo Produto{% endif %}{% endblock %}
+
+{% block conteudo %}
+  <h2>{% if form.instance.pk %}Editar Produto{% else %}Cadastrar Produto{% endif %}</h2>
+  <form method="post">
+    {% csrf_token %}
+      {{ form.nome|as_crispy_field }}
+      {{ form.categoria|as_crispy_field }}
+      {{ form.marca|as_crispy_field }}
+      {{ form.dataValidade|as_crispy_field }}
+      {{ form.preco|as_crispy_field }}
+
+      <div class="mb-3">
+        <label class="form-label">Unidades <span style="font-weight:normal">x</span> Metrica</label>
+        <div class="input-group">
+          {{ form.unidades }}
+          <span class="input-group-text">x</span>
+          {{ form.metrica }}
+        </div>
+        {% if form.unidades.help_text %}
+          <div class="form-text">{{ form.unidades.help_text }}</div>
+        {% endif %}
+      </div>
+
+      <hr>
+      <div class="mb-3">
+        <label>
+          {{ form.criar_compra_recorrente }} Compra Recorrente
+        </label>
+      </div>
+      <div id="compra-recorrente-campos" style="display: none;">
+        <div class="row">
+          <div class="col-md-4">{{ form.data_inicio|as_crispy_field }}</div>
+          <div class="col-md-4">{{ form.intervalo_valor|as_crispy_field }}</div>
+          <div class="col-md-4">{{ form.intervalo_tipo|as_crispy_field }}</div>
+        </div>
+        <div class="row">
+          <div class="col-md-4">{{ form.cota_minima|as_crispy_field }}</div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-success">Salvar</button>
+    </form>
+  <a href="{% url 'estoque_dashboard' estoque.id %}" class="btn btn-secondary mt-3">Voltar para o Dashboard</a>
+
+  <script>
+    function toggleCompraRecorrenteCampos() {
+      var checkbox = document.getElementById("id_criar_compra_recorrente");
+      var campos = document.getElementById("compra-recorrente-campos");
+      if (checkbox.checked) {
+        campos.style.display = "block";
+      } else {
+        campos.style.display = "none";
+      }
+    }
+    document.addEventListener("DOMContentLoaded", function() {
+      var checkbox = document.getElementById("id_criar_compra_recorrente");
+      if (checkbox) {
+        checkbox.addEventListener("change", toggleCompraRecorrenteCampos);
+        toggleCompraRecorrenteCampos();
+      }
+    });
+  </script>
+
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends 'App/base.html' %}
+{% block title %}Editar Estoque{% endblock %}
+{% block conteudo %}
+  <h2>Editar Estoque: {{ estoque.nome }}</h2>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label for="id_nome" class="form-label">Nome</label>
+      {{ form.nome }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Usuários</label><br>
+      <label style="margin-right: 15px;">
+        <input
+          type="checkbox"
+          checked
+          disabled
+        >
+        {{ request.user.username }}
+      </label>
+      {% for user in form.usuarios.field.queryset %}
+        <label style="margin-right: 15px;">
+          <input
+            type="checkbox"
+            name="usuarios"
+            value="{{ user.id }}"
+            {% if user.id in form.usuarios.value %}checked{% endif %}
+          >
+          {{ user.username }}
+        </label>
+      {% endfor %}
+      <div style="font-size:0.95em;color:#888;">(Você não pode remover seu próprio acesso)</div>
+    </div>
+    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+    <a href="{% url 'selecionar_estoque' %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+{% endblock %}

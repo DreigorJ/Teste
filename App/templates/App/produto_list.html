@@ -1,0 +1,39 @@
+{% extends 'App/base.html' %}
+{% block title %}Produtos{% endblock %}
+{% block conteudo %}
+    <h2>Produtos do estoque: {{ estoque.nome }}</h2>
+    <a href="{% url 'produto_create' estoque.id %}">Novo Produto</a> |
+    <a href="{% url 'categoria_create' estoque.id %}">Nova Categoria</a>
+    <ul>
+        {% for categoria in categorias %}
+            <li><strong>{{ categoria.nome }}</strong>
+                <ul>
+                    {% for produto in produtos %}
+                        {% if produto.categoria == categoria %}
+                        <li>
+                            {{ produto.nome }} | {{ produto.marca }} | {{ produto.validade }} |
+                            {{ produto.preco }} | {{ produto.unidades }} {{ produto.get_metrica_display }}
+                            [<a href="{% url 'produto_update' estoque.id produto.id %}">Editar</a>]
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+        <li><strong>Sem Categoria</strong>
+            <ul>
+                {% for produto in produtos %}
+                    {% if not produto.categoria %}
+                    <li>
+                        {{ produto.nome }} | {{ produto.marca }} | {{ produto.validade }} |
+                        {{ produto.preco }} | {{ produto.unidades }} {{ produto.get_metrica_display }}
+                        [<a href="{% url 'produto_update' estoque.id produto.id %}">Editar</a>]
+                    </li>
+                    {% endif %}
+                {% endfor %}
+            </ul>
+        </li>
+    </ul>
+    <a href="{% url 'selecionar_estoque' %}">Trocar de Estoque</a>
+    | <a href="{% url 'estoque_list' estoque.id %}">Ver Estoque</a>
+{% endblock %}

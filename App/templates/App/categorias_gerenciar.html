@@ -1,0 +1,44 @@
+<h3>Gerenciar Categorias</h3>
+
+{% if categoria_form %}
+  <h4>{% if categoria_form.instance.pk %}Editar Categoria{% else %}Nova Categoria{% endif %}</h4>
+  <form method="post">
+    {% csrf_token %}
+    {{ categoria_form.as_p }}
+    <button type="submit" class="btn btn-primary">{% if categoria_form.instance.pk %}Salvar Alterações{% else %}Salvar{% endif %}</button>
+    <a href="{% url 'estoque_dashboard' estoque.id %}?aba=categorias" class="btn btn-secondary mt-3">Cancelar</a>
+  </form>
+  <hr>
+{% endif %}
+
+<form method="post" style="display: inline-block; margin-bottom: 1rem;">
+  {% csrf_token %}
+  <input type="hidden" name="nova_categoria" value="1">
+  <button type="submit" class="btn btn-success">Nova Categoria</button>
+</form>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Nome</th>
+      <th>Ações</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for categoria in categorias %}
+      <tr>
+        <td>{{ categoria.nome }}</td>
+        <td>
+          <a href="{% url 'estoque_dashboard' estoque.id %}?aba=categorias&cat_edit={{ categoria.id }}" class="btn btn-sm btn-outline-primary">Editar</a>
+          <form method="post" action="{% url 'estoque_dashboard' estoque.id %}?aba=categorias" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="cat_delete" value="{{ categoria.id }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Deseja excluir esta categoria?');">Excluir</button>
+          </form>
+        </td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="2">Nenhuma categoria cadastrada.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
