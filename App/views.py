@@ -6,9 +6,8 @@ from django.contrib.auth import login, logout, get_user_model
 from django.contrib import messages
 from django.db import models
 from .models import Estoque, Produto, Categoria, Movimentacao, Metrica
-from .forms import ProdutoForm, CategoriaForm, CustomUserCreationForm, EstoqueForm, CompraRecorrente
+from .forms import ProdutoForm, CategoriaForm, CustomUserCreationForm, EstoqueForm
 from django.http import JsonResponse, HttpResponseForbidden
-from django.utils import timezone
 from django.urls import reverse
 
 def login_usuario(request):
@@ -212,10 +211,8 @@ def estoque_dashboard(request, estoque_id):
                 if form_produto.cleaned_data.get('criar_compra_recorrente'):
                     CompraRecorrente.objects.create(
                         produto=produto,
-                        data_inicio=form_produto.cleaned_data['data_inicio'] or timezone.now().date(),
-                        intervalo_valor=form_produto.cleaned_data['intervalo_valor'],
-                        intervalo_tipo=form_produto.cleaned_data['intervalo_tipo'],
-                        cota_minima=form_produto.cleaned_data['cota_minima']
+                        cota_minima=form_produto.cleaned_data.get('cota_minima', 0),
+                        checar_periodicamente=form_produto.cleaned_data.get('checar_periodicamente', True)
                     )
                 return redirect(f"{reverse('estoque_dashboard', args=[estoque.id])}?aba=produtos")
 
@@ -279,21 +276,18 @@ def estoque_dashboard(request, estoque_id):
         except ValueError:
             pass
 
-    # AVISOS RECORRENTES
+    # AVISOS RECORRENTES - Simplified logic: only check quota and if periodic checking is enabled
     for compra in compras_recorrentes:
-        atrasada, dias_atraso = compra.esta_atrasada()
-        if atrasada:
+        if compra.checar_periodicamente and not compra.ignorar_ate_logout:
             produto = compra.produto
             saldo = Movimentacao.objects.filter(produto=produto, tipo=Movimentacao.ENTRADA).aggregate(
                 total=models.Sum('quantidade'))['total'] or 0
             saldo -= Movimentacao.objects.filter(produto=produto, tipo=Movimentacao.SAIDA).aggregate(
                 total=models.Sum('quantidade'))['total'] or 0
-            if saldo < compra.cota_minima:
+            if compra.cota_minima > 0 and saldo < compra.cota_minima:
                 avisos_recorrentes.append({
                     'compra_id': compra.id,
                     'produto_nome': produto.nome,
-                    'dias_atraso': dias_atraso,
-                    'ultima_compra': compra.ultima_compra,
                     'saldo_atual': saldo,
                     'minimo': compra.cota_minima,
                 })
@@ -331,10 +325,8 @@ def produto_create(request, estoque_id):
             if form.cleaned_data.get('criar_compra_recorrente'):
                 CompraRecorrente.objects.create(
                     produto=produto,
-                    data_inicio=form.cleaned_data['data_inicio'] or timezone.now().date(),
-                    intervalo_valor=form.cleaned_data['intervalo_valor'],
-                    intervalo_tipo=form.cleaned_data['intervalo_tipo'],
-                    cota_minima=form.cleaned_data['cota_minima']
+                    cota_minima=form.cleaned_data.get('cota_minima', 0),
+                    checar_periodicamente=form.cleaned_data.get('checar_periodicamente', True)
                 )
             return redirect('estoque_dashboard', estoque_id=estoque.id)
     else:
@@ -376,22 +368,18 @@ def produto_update(request, estoque_id, produto_id):
                     quantidade=abs(diff)
                 )
 
-            # Compra recorrente permanece igual
+            # Compra recorrente simplified logic
             if form.cleaned_data.get('criar_compra_recorrente'):
                 if compra_recorrente:
-                    compra_recorrente.data_inicio = form.cleaned_data['data_inicio'] or timezone.now().date()
-                    compra_recorrente.intervalo_valor = form.cleaned_data['intervalo_valor']
-                    compra_recorrente.intervalo_tipo = form.cleaned_data['intervalo_tipo']
-                    compra_recorrente.cota_minima = form.cleaned_data['cota_minima']
+                    compra_recorrente.cota_minima = form.cleaned_data.get('cota_minima', 0)
+                    compra_recorrente.checar_periodicamente = form.cleaned_data.get('checar_periodicamente', True)
                     compra_recorrente.ignorar_ate_logout = False
                     compra_recorrente.save()
                 else:
                     CompraRecorrente.objects.create(
                         produto=produto,
-                        data_inicio=form.cleaned_data['data_inicio'] or timezone.now().date(),
-                        intervalo_valor=form.cleaned_data['intervalo_valor'],
-                        intervalo_tipo=form.cleaned_data['intervalo_tipo'],
-                        cota_minima=form.cleaned_data['cota_minima']
+                        cota_minima=form.cleaned_data.get('cota_minima', 0),
+                        checar_periodicamente=form.cleaned_data.get('checar_periodicamente', True)
                     )
             elif compra_recorrente:
                 compra_recorrente.delete()
@@ -399,25 +387,11 @@ def produto_update(request, estoque_id, produto_id):
     else:
         initial = {}
 
-        from datetime import datetime, date as dt_date
-
         if compra_recorrente:
-            data_inicio = compra_recorrente.data_inicio
-            if data_inicio is None:
-                data_inicio = timezone.now().date()
-            elif isinstance(data_inicio, str):
-                try:
-                    data_inicio = datetime.strptime(data_inicio, '%Y-%m-%d').date()
-                except ValueError:
-                    data_inicio = timezone.now().date()
-            elif not isinstance(data_inicio, dt_date):
-                data_inicio = timezone.now().date()
             initial.update({
                 'criar_compra_recorrente': True,
-                'data_inicio': data_inicio,
-                'intervalo_valor': compra_recorrente.intervalo_valor,
-                'intervalo_tipo': compra_recorrente.intervalo_tipo,
-                'cota_minima': compra_recorrente.cota_minima
+                'cota_minima': compra_recorrente.cota_minima,
+                'checar_periodicamente': compra_recorrente.checar_periodicamente
             })
 
         form = ProdutoForm(instance=produto, estoque=estoque, initial=initial)
@@ -499,10 +473,13 @@ def ignorar_compra_recorrente(request, compra_id):
 
 @login_required
 def marcar_compra_realizada(request, compra_id):
+    # This method is deprecated in the simplified recurring purchase system
+    # We no longer track purchase dates, just stock levels
     if request.method == "POST":
         try:
             compra = CompraRecorrente.objects.get(pk=compra_id)
-            compra.data_inicio = timezone.now().date()  # Atualiza para hoje
+            # Instead of updating dates, we just remove the ignore flag
+            compra.ignorar_ate_logout = False
             compra.save()
             return JsonResponse({"sucesso": True})
         except CompraRecorrente.DoesNotExist:
