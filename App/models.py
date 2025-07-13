@@ -1,9 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-from dateutil.relativedelta import relativedelta
-from datetime import timedelta, date
-
 class Estoque(models.Model):
     nome = models.CharField(max_length=100)
     usuarios = models.ManyToManyField(User, related_name='estoques')
@@ -57,36 +54,7 @@ class Movimentacao(models.Model):
         return f"{self.get_tipo_display()} - {self.produto.nome} ({self.quantidade})"
 
 class CompraRecorrente(models.Model):
-    INTERVALO_CHOICES = [
-        ('dias', 'Dias'),
-        ('meses', 'Meses'),
-        ('anos', 'Anos'),
-    ]
     produto = models.ForeignKey(Produto, on_delete=models.CASCADE, related_name='compras_recorrentes')
-    data_inicio = models.DateField()
-    intervalo_valor = models.PositiveIntegerField(default=30)
-    intervalo_tipo = models.CharField(max_length=6, choices=INTERVALO_CHOICES, default='meses')
-    cota_minima = models.PositiveIntegerField()
-    ultima_compra = models.DateField(null=True, blank=True)
+    cota_minima = models.PositiveIntegerField(default=0)
+    checar_periodicamente = models.BooleanField(default=True)
     ignorar_ate_logout = models.BooleanField(default=False)
-
-    def proxima_data(self):
-        """Calcula a próxima data esperada da compra recorrente."""
-        base = self.ultima_compra or self.data_inicio
-        if self.intervalo_tipo == 'dias':
-            return base + timedelta(days=self.intervalo_valor)
-        elif self.intervalo_tipo == 'meses':
-            return base + relativedelta(months=self.intervalo_valor)
-        elif self.intervalo_tipo == 'anos':
-            return base + relativedelta(years=self.intervalo_valor)
-        return base
-
-    def esta_atrasada(self):
-        """Retorna (True, dias_atraso) se está atrasada, caso contrário (False, 0)."""
-        if self.ignorar_ate_logout:
-            return False, 0
-        hoje = date.today()
-        proxima = self.proxima_data()
-        if hoje > proxima:
-            return True, (hoje - proxima).days
-        return False, 0

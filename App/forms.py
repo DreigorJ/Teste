@@ -7,9 +7,6 @@ from django.contrib.auth.models import User
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Row, Column
 
-from datetime import date
-from django.forms.widgets import DateInput
-
 class CustomUserCreationForm(UserCreationForm):
     nome = forms.CharField(max_length=150, label="Nome completo")
     email = forms.EmailField(max_length=254, help_text="Obrigatório. Informe um email válido.", label="Email")
@@ -57,22 +54,13 @@ class ProdutoForm(forms.ModelForm):
     criar_compra_recorrente = forms.BooleanField(
         required=False, label="Adicionar Compra Recorrente"
     )
-    intervalo_valor = forms.IntegerField(
-        required=False, min_value=1, label="Intervalo",
-        help_text="Ex: 30 para 30 dias/meses/anos"
-    )
-    intervalo_tipo = forms.ChoiceField(
-        choices=CompraRecorrente.INTERVALO_CHOICES,
-        required=False, label="Tipo de Intervalo"
-    )
     cota_minima = forms.IntegerField(
-        required=False, min_value=1, label="Cota Mínima"
+        required=False, min_value=0, label="Cota Mínima",
+        help_text="Quantidade mínima para gerar alerta (0 = sem alerta)"
     )
-    data_inicio = forms.DateField(
-        required=False,
-        widget=DateInput(format='%Y-%m-%d', attrs={'type': 'date'}),
-        input_formats=['%Y-%m-%d'],
-        label='Data de Início'
+    checar_periodicamente = forms.BooleanField(
+        required=False, initial=True, label="Checar Periodicamente",
+        help_text="Verificar se está abaixo da cota mínima"
     )
 
     class Meta:
@@ -85,15 +73,6 @@ class ProdutoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         estoque = kwargs.pop('estoque', None)
         super().__init__(*args, **kwargs)
-
-        data_ini = self.initial.get('data_inicio')
-        if data_ini and isinstance(data_ini, str):
-            # Tenta converter apenas do formato ISO para evitar data brasileira
-            try:
-                self.initial['data_inicio'] = date.strptime(data_ini, '%Y-%m-%d').date()
-            except Exception:
-                self.initial['data_inicio'] = None
-        #print("DEBUG FORM INIT: data_inicio:", self.initial.get('data_inicio'), type(self.initial.get('data_inicio')))
 
         if estoque:
             self.fields['categoria'].queryset = Categoria.objects.filter(estoque=estoque)
@@ -116,16 +95,6 @@ class ProdutoForm(forms.ModelForm):
             ),
         )
         self.fields['metrica'].queryset = Metrica.objects.all().order_by('-fixa', 'nome')
-
-    def clean_data_inicio(self):
-        data = self.cleaned_data.get('data_inicio')
-        if data and isinstance(data, str):
-            # Aceita apenas o formato ISO, pois é o que o input type=date usa
-            try:
-                data = date.strptime(data, '%Y-%m-%d').date()
-            except ValueError:
-                raise forms.ValidationError("Formato de data inválido. Use yyyy-mm-dd.")
-        return data
 
 class CategoriaForm(forms.ModelForm):
     class Meta:

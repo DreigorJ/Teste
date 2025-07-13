@@ -26,12 +26,8 @@
     </div>
     <div id="compra-recorrente-campos" style="display: none;">
         <div class="row">
-            <div class="col-md-4">{{ form.data_inicio|as_crispy_field }}</div>
-            <div class="col-md-4">{{ form.intervalo_valor|as_crispy_field }}</div>
-            <div class="col-md-4">{{ form.intervalo_tipo|as_crispy_field }}</div>
-        </div>
-        <div class="row">
-            <div class="col-md-4">{{ form.cota_minima|as_crispy_field }}</div>
+            <div class="col-md-6">{{ form.cota_minima|as_crispy_field }}</div>
+            <div class="col-md-6">{{ form.checar_periodicamente|as_crispy_field }}</div>
         </div>
     </div>
     <button type="submit" class="btn btn-success">Salvar</button>
